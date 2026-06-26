@@ -1,30 +1,46 @@
 import { useState } from 'react'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@radix-ui/react-tabs'
+import { createEvent, joinEvent, EventNotFoundError } from '../lib/events'
+
+type FormState = { loading: boolean; error: string | null }
+const IDLE: FormState = { loading: false, error: null }
 
 export function Landing() {
   const navigate = useNavigate()
-  const [createForm, setCreateForm] = useState({
-    eventName: '',
-    theme: '',
-    yourName: '',
-  })
-  const [joinForm, setJoinForm] = useState({
-    inviteCode: '',
-    yourName: '',
-  })
+  const { join: prefillCode } = useSearch({ from: '/' })
+  const [createForm, setCreateForm] = useState({ eventName: '', theme: '', yourName: '' })
+  const [joinForm, setJoinForm] = useState({ inviteCode: prefillCode ?? '', yourName: '' })
+  const [createState, setCreateState] = useState<FormState>(IDLE)
+  const [joinState, setJoinState] = useState<FormState>(IDLE)
 
-  const handleCreate = (e: React.FormEvent) => {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
-    // TODO step 2: insert event + participant via Supabase, setSession, then navigate with real code
-    const code = Math.random().toString(36).substring(7)
-    navigate({ to: '/$code', params: { code } })
+    setCreateState({ loading: true, error: null })
+    try {
+      const session = await createEvent({
+        name: createForm.eventName,
+        theme: createForm.theme || null,
+        username: createForm.yourName,
+      })
+      navigate({ to: '/$code', params: { code: session.eventCode } })
+    } catch (err) {
+      setCreateState({ loading: false, error: errorMessage(err) })
+    }
   }
 
-  const handleJoin = (e: React.FormEvent) => {
+  const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault()
-    // TODO step 2: look up event by code, create participant, setSession
-    navigate({ to: '/$code', params: { code: joinForm.inviteCode } })
+    setJoinState({ loading: true, error: null })
+    try {
+      const session = await joinEvent({
+        code: joinForm.inviteCode,
+        username: joinForm.yourName,
+      })
+      navigate({ to: '/$code', params: { code: session.eventCode } })
+    } catch (err) {
+      setJoinState({ loading: false, error: errorMessage(err) })
+    }
   }
 
   return (
@@ -42,7 +58,15 @@ export function Landing() {
           what we wearing?
         </h1>
 
-        <Tabs defaultValue="create" className="w-full">
+        <Tabs
+          defaultValue={prefillCode ? 'join' : 'create'}
+          className="w-full"
+          onValueChange={() => {
+            // reset errors when switching tabs
+            setCreateState(IDLE)
+            setJoinState(IDLE)
+          }}
+        >
           <TabsList className="grid w-full grid-cols-2 mb-12 border-b border-foreground/15">
             <TabsTrigger
               value="create"
@@ -62,107 +86,62 @@ export function Landing() {
 
           <TabsContent value="create">
             <form onSubmit={handleCreate} className="space-y-8">
-              <div className="space-y-2">
-                <label
-                  className="block uppercase tracking-widest text-xs"
-                  style={{ fontFamily: 'var(--font-body)' }}
-                >
-                  Event name
-                </label>
-                <input
-                  type="text"
-                  value={createForm.eventName}
-                  onChange={(e) => setCreateForm({ ...createForm, eventName: e.target.value })}
-                  className="w-full bg-transparent border-0 border-b border-foreground/30 focus:border-accent focus:outline-none pb-2 transition-colors"
-                  style={{ fontFamily: 'var(--font-body)' }}
-                  required
-                />
-              </div>
+              <Field
+                label="Event name"
+                value={createForm.eventName}
+                onChange={(v) => setCreateForm({ ...createForm, eventName: v })}
+                required
+              />
+              <Field
+                label="Theme (optional)"
+                value={createForm.theme}
+                onChange={(v) => setCreateForm({ ...createForm, theme: v })}
+              />
+              <Field
+                label="Your name"
+                value={createForm.yourName}
+                onChange={(v) => setCreateForm({ ...createForm, yourName: v })}
+                required
+              />
 
-              <div className="space-y-2">
-                <label
-                  className="block uppercase tracking-widest text-xs"
-                  style={{ fontFamily: 'var(--font-body)' }}
-                >
-                  Theme (optional)
-                </label>
-                <input
-                  type="text"
-                  value={createForm.theme}
-                  onChange={(e) => setCreateForm({ ...createForm, theme: e.target.value })}
-                  className="w-full bg-transparent border-0 border-b border-foreground/30 focus:border-accent focus:outline-none pb-2 transition-colors"
-                  style={{ fontFamily: 'var(--font-body)' }}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label
-                  className="block uppercase tracking-widest text-xs"
-                  style={{ fontFamily: 'var(--font-body)' }}
-                >
-                  Your name
-                </label>
-                <input
-                  type="text"
-                  value={createForm.yourName}
-                  onChange={(e) => setCreateForm({ ...createForm, yourName: e.target.value })}
-                  className="w-full bg-transparent border-0 border-b border-foreground/30 focus:border-accent focus:outline-none pb-2 transition-colors"
-                  style={{ fontFamily: 'var(--font-body)' }}
-                  required
-                />
-              </div>
+              {createState.error && <ErrorText>{createState.error}</ErrorText>}
 
               <button
                 type="submit"
-                className="w-full bg-accent text-accent-foreground py-4 mt-8 uppercase tracking-widest text-sm transition-opacity hover:opacity-90 border-2 border-secondary"
+                disabled={createState.loading}
+                className="w-full bg-accent text-accent-foreground py-4 mt-8 uppercase tracking-widest text-sm transition-opacity hover:opacity-90 border-2 border-secondary disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ fontFamily: 'var(--font-body)' }}
               >
-                Create event
+                {createState.loading ? 'Creating…' : 'Create event'}
               </button>
             </form>
           </TabsContent>
 
           <TabsContent value="join">
             <form onSubmit={handleJoin} className="space-y-8">
-              <div className="space-y-2">
-                <label
-                  className="block uppercase tracking-widest text-xs"
-                  style={{ fontFamily: 'var(--font-body)' }}
-                >
-                  Invite code
-                </label>
-                <input
-                  type="text"
-                  value={joinForm.inviteCode}
-                  onChange={(e) => setJoinForm({ ...joinForm, inviteCode: e.target.value })}
-                  className="w-full bg-transparent border-0 border-b border-foreground/30 focus:border-accent focus:outline-none pb-2 transition-colors font-mono"
-                  required
-                />
-              </div>
+              <Field
+                label="Invite code"
+                value={joinForm.inviteCode}
+                onChange={(v) => setJoinForm({ ...joinForm, inviteCode: v })}
+                required
+                mono
+              />
+              <Field
+                label="Your name"
+                value={joinForm.yourName}
+                onChange={(v) => setJoinForm({ ...joinForm, yourName: v })}
+                required
+              />
 
-              <div className="space-y-2">
-                <label
-                  className="block uppercase tracking-widest text-xs"
-                  style={{ fontFamily: 'var(--font-body)' }}
-                >
-                  Your name
-                </label>
-                <input
-                  type="text"
-                  value={joinForm.yourName}
-                  onChange={(e) => setJoinForm({ ...joinForm, yourName: e.target.value })}
-                  className="w-full bg-transparent border-0 border-b border-foreground/30 focus:border-accent focus:outline-none pb-2 transition-colors"
-                  style={{ fontFamily: 'var(--font-body)' }}
-                  required
-                />
-              </div>
+              {joinState.error && <ErrorText>{joinState.error}</ErrorText>}
 
               <button
                 type="submit"
-                className="w-full bg-accent text-accent-foreground py-4 mt-8 uppercase tracking-widest text-sm transition-opacity hover:opacity-90 border-2 border-secondary"
+                disabled={joinState.loading}
+                className="w-full bg-accent text-accent-foreground py-4 mt-8 uppercase tracking-widest text-sm transition-opacity hover:opacity-90 border-2 border-secondary disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ fontFamily: 'var(--font-body)' }}
               >
-                Join event
+                {joinState.loading ? 'Joining…' : 'Join event'}
               </button>
             </form>
           </TabsContent>
@@ -170,4 +149,51 @@ export function Landing() {
       </div>
     </div>
   )
+}
+
+function Field(props: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+  required?: boolean
+  mono?: boolean
+}) {
+  return (
+    <div className="space-y-2">
+      <label
+        className="block uppercase tracking-widest text-xs"
+        style={{ fontFamily: 'var(--font-body)' }}
+      >
+        {props.label}
+      </label>
+      <input
+        type="text"
+        value={props.value}
+        onChange={(e) => props.onChange(e.target.value)}
+        className={
+          'w-full bg-transparent border-0 border-b border-foreground/30 focus:border-accent focus:outline-none pb-2 transition-colors' +
+          (props.mono ? ' font-mono' : '')
+        }
+        style={props.mono ? undefined : { fontFamily: 'var(--font-body)' }}
+        required={props.required}
+      />
+    </div>
+  )
+}
+
+function ErrorText({ children }: { children: React.ReactNode }) {
+  return (
+    <p
+      className="text-destructive text-xs uppercase tracking-widest"
+      style={{ fontFamily: 'var(--font-body)' }}
+    >
+      {children}
+    </p>
+  )
+}
+
+function errorMessage(err: unknown): string {
+  if (err instanceof EventNotFoundError) return `No event found for "${err.code}"`
+  if (err instanceof Error) return err.message
+  return 'Something went wrong'
 }
