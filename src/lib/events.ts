@@ -92,6 +92,62 @@ export async function joinEvent(input: {
   return session
 }
 
+export type GalleryEntry = {
+  participant: Participant
+  exportUrl: string
+}
+
+/**
+ * Fetch an event + all published outfits (with participant info) for the gallery.
+ */
+export async function loadGalleryData(code: string): Promise<{
+  event: Event
+  entries: GalleryEntry[]
+}> {
+  const normalized = code.trim().toLowerCase()
+
+  const { data: event, error: eErr } = await supabase
+    .from('events')
+    .select('*')
+    .eq('code', normalized)
+    .maybeSingle<Event>()
+
+  if (eErr) throw eErr
+  if (!event) throw new EventNotFoundError(normalized)
+
+  const { data: outfits, error: oErr } = await supabase
+    .from('outfits')
+    .select('export_url, participant_id')
+    .eq('event_id', event.id)
+    .eq('is_published', true)
+    .not('export_url', 'is', null)
+
+  if (oErr) throw oErr
+
+  if (!outfits || outfits.length === 0) return { event, entries: [] }
+
+  const participantIds = outfits.map((o) => o.participant_id as string)
+
+  const { data: participants, error: pErr } = await supabase
+    .from('participants')
+    .select('*')
+    .in('id', participantIds)
+
+  if (pErr) throw pErr
+
+  const participantMap = new Map<string, Participant>(
+    ((participants ?? []) as Participant[]).map((p) => [p.id, p]),
+  )
+
+  const entries: GalleryEntry[] = []
+  for (const o of outfits) {
+    const participant = participantMap.get(o.participant_id as string)
+    if (participant) entries.push({ participant, exportUrl: o.export_url as string })
+  }
+
+  return { event, entries }
+}
+
 /**
  * Fetch an event by code along with its participants (oldest first).
  */
