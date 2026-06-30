@@ -66,6 +66,7 @@ const builderRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/$code/builder',
   beforeLoad: ({ params }) => requireSession(params),
+  staleTime: 0,
   loader: async ({ params }) => {
     const session = getSession(params.code)!  // beforeLoad guarantees this
     try {

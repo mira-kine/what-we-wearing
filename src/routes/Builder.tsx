@@ -43,6 +43,14 @@ export function Builder() {
   const [selected, setSelected] = useState<CanvasState>(
     outfit?.canvas_state ?? {}
   );
+
+  // Loader re-runs on every visit to this route (staleTime: 0), but this
+  // component can stay mounted across that re-run, so sync local state
+  // whenever fresh loader data comes in.
+  useEffect(() => {
+    setCloset(initialCloset);
+    setSelected(outfit?.canvas_state ?? {});
+  }, [initialCloset, outfit]);
   const [upload, setUpload] = useState<{
     slotKey: SlotKey;
     progress: UploadProgress;
@@ -340,7 +348,7 @@ function SlotRow(props: {
         </p>
         {phaseLabel && (
           <p
-            className="text-xs text-secondary"
+            className="text-sm text-secondary"
             style={{ fontFamily: 'var(--font-body)' }}
           >
             {phaseLabel}
