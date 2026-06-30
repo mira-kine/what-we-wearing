@@ -8,7 +8,7 @@ const IDLE: FormState = { loading: false, error: null }
 
 export function Landing() {
   const navigate = useNavigate()
-  const { join: prefillCode } = useSearch({ from: '/' })
+  const { join: prefillCode, error: routeError } = useSearch({ from: '/' })
   const [createForm, setCreateForm] = useState({ eventName: '', theme: '', yourName: '' })
   const [joinForm, setJoinForm] = useState({ inviteCode: prefillCode ?? '', yourName: '' })
   const [createState, setCreateState] = useState<FormState>(IDLE)
@@ -57,6 +57,15 @@ export function Landing() {
         >
           what we wearing?
         </h1>
+
+        {routeError === 'group-not-found' && (
+          <p
+            className="text-center text-destructive text-xs uppercase tracking-widest"
+            style={{ fontFamily: 'var(--font-body)' }}
+          >
+            Group event not found
+          </p>
+        )}
 
         <Tabs
           defaultValue={prefillCode ? 'join' : 'create'}

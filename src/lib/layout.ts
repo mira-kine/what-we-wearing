@@ -27,13 +27,73 @@ export const SLOT_RENDER_ORDER: SlotKey[] = ['shoes', 'bottom', 'top', 'face', '
 
 /** Placeholder mannequin. Replace with finished asset later. */
 const MANNEQUIN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 640">
-  <circle cx="200" cy="80" r="50" fill="#1C1208" opacity="0.1"/>
-  <circle cx="200" cy="80" r="42" fill="#F4F1E2"/>
-  <circle cx="200" cy="80" r="42" stroke="#1C1208" stroke-width="2" opacity="0.2" fill="none"/>
-  <rect x="180" y="130" width="40" height="25" fill="#1C1208" opacity="0.1"/>
-  <path d="M 140 155 L 140 320 L 160 350 L 160 445 L 152 540 L 152 600 L 172 600 L 172 540 L 180 445 L 180 350 L 200 320 L 220 350 L 220 445 L 228 540 L 228 600 L 248 600 L 248 540 L 240 445 L 240 350 L 260 320 L 260 155 Z" fill="#1C1208" opacity="0.1"/>
-  <rect x="100" y="165" width="40" height="130" rx="20" fill="#1C1208" opacity="0.1"/>
-  <rect x="260" y="165" width="40" height="130" rx="20" fill="#1C1208" opacity="0.1"/>
+  <!-- Head -->
+  <ellipse cx="200" cy="62" rx="34" ry="40" fill="#F4F1E2" stroke="#1C1208" stroke-width="1.5" opacity="0.85"/>
+  <!-- Neck -->
+  <rect x="188" y="98" width="24" height="22" rx="6" fill="#F4F1E2" stroke="#1C1208" stroke-width="1" opacity="0.7"/>
+  <!-- Torso: narrower shoulders taper to waist, slight hip flare -->
+  <path d="
+    M 172 118
+    Q 200 112 228 118
+    L 246 134
+    L 250 220
+    Q 250 234 236 241
+    L 236 260
+    Q 252 272 255 288
+    L 250 362
+    Q 248 368 242 370
+    L 158 370
+    Q 152 368 150 362
+    L 145 288
+    Q 148 272 164 260
+    L 164 241
+    Q 150 234 150 220
+    L 154 134 Z"
+    fill="#FCF4E7" stroke="#2C2521" stroke-width="1.5" opacity="0.85"/>
+  <!-- Left arm -->
+  <path d="
+    M 150 136
+    Q 122 144 114 165
+    L 104 322
+    Q 103 341 112 349
+    L 124 349
+    Q 136 341 139 322
+    L 146 170
+    Z"
+    fill="#FCF4E7" stroke="#2C2521" stroke-width="1.5" opacity="0.85"/>
+  <!-- Right arm -->
+  <path d="
+    M 250 136
+    Q 278 144 286 165
+    L 296 322
+    Q 297 341 288 349
+    L 276 349
+    Q 264 341 261 322
+    L 254 170
+    Z"
+    fill="#FCF4E7" stroke="#2C2521" stroke-width="1.5" opacity="0.85"/>
+  <!-- Left leg -->
+  <path d="
+    M 161 370
+    Q 154 380 153 400
+    L 147 600
+    Q 147 622 161 630
+    L 181 630
+    Q 191 622 192 600
+    L 198 400
+    Q 196 380 189 370 Z"
+    fill="#FCF4E7" stroke="#2C2521" stroke-width="1.5" opacity="0.85"/>
+  <!-- Right leg -->
+  <path d="
+    M 239 370
+    Q 246 380 247 400
+    L 253 600
+    Q 253 622 239 630
+    L 219 630
+    Q 209 622 208 600
+    L 202 400
+    Q 204 380 211 370 Z"
+    fill="#FCF4E7" stroke="#2C2521" stroke-width="1.5" opacity="0.85"/>
 </svg>`
 
 export const MANNEQUIN_DATA_URL =

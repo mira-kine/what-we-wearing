@@ -8,10 +8,9 @@ export function EventHub() {
   const { event, participants } = useLoaderData({ from: '/$code' })
   const [copied, setCopied] = useState(false)
 
-  const copyInviteUrl = async () => {
-    const url = `${window.location.origin}/${event.code}`
+  const copyInviteCode = async () => {
     try {
-      await navigator.clipboard.writeText(url)
+      await navigator.clipboard.writeText(event.code)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
@@ -45,9 +44,9 @@ export function EventHub() {
           )}
 
           <button
-            onClick={copyInviteUrl}
+            onClick={copyInviteCode}
             className="inline-flex items-center gap-2 px-6 py-2 bg-foreground/5 border-2 border-secondary hover:border-accent transition-colors font-mono"
-            title="Copy invite link"
+            title="Copy invite code"
           >
             <span>{event.code}</span>
             {copied ? (

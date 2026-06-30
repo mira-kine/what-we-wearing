@@ -11,7 +11,7 @@ import { EventHub } from './routes/EventHub'
 import { Builder } from './routes/Builder'
 import { Gallery } from './routes/Gallery'
 import { getSession } from './lib/session'
-import { loadEventByCode, EventNotFoundError } from './lib/events'
+import { loadEventByCode, loadGalleryData, EventNotFoundError } from './lib/events'
 import { loadBuilderData } from './lib/builder'
 
 const rootRoute = createRootRoute({
@@ -28,8 +28,8 @@ const rootRoute = createRootRoute({
  * Covers: no session at all, or session from a different event.
  */
 function requireSession(params: { code: string }) {
-  const session = getSession()
-  if (!session || session.eventCode !== params.code) {
+  const session = getSession(params.code)
+  if (!session) {
     throw redirect({ to: '/', search: { join: params.code } })
   }
 }
@@ -38,8 +38,9 @@ const landingRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
   component: Landing,
-  validateSearch: (search: Record<string, unknown>): { join?: string } => ({
+  validateSearch: (search: Record<string, unknown>): { join?: string; error?: string } => ({
     join: typeof search.join === 'string' ? search.join : undefined,
+    error: typeof search.error === 'string' ? search.error : undefined,
   }),
 })
 
@@ -53,7 +54,7 @@ const eventHubRoute = createRoute({
     } catch (err) {
       // Bad code → bounce to landing prefilled
       if (err instanceof EventNotFoundError) {
-        throw redirect({ to: '/', search: { join: params.code } })
+        throw redirect({ to: '/', search: { join: params.code, error: 'group-not-found' } })
       }
       throw err
     }
@@ -65,13 +66,14 @@ const builderRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/$code/builder',
   beforeLoad: ({ params }) => requireSession(params),
+  staleTime: 0,
   loader: async ({ params }) => {
-    const session = getSession()!  // beforeLoad guarantees this
+    const session = getSession(params.code)!  // beforeLoad guarantees this
     try {
       return await loadBuilderData(params.code, session.participantId)
     } catch (err) {
       if (err instanceof EventNotFoundError) {
-        throw redirect({ to: '/', search: { join: params.code } })
+        throw redirect({ to: '/', search: { join: params.code, error: 'group-not-found' } })
       }
       throw err
     }
@@ -83,6 +85,19 @@ const galleryRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/$code/gallery',
   beforeLoad: ({ params }) => requireSession(params),
+  validateSearch: (search: Record<string, unknown>): { from?: string } => ({
+    from: typeof search.from === 'string' ? search.from : undefined,
+  }),
+  loader: async ({ params }) => {
+    try {
+      return await loadGalleryData(params.code)
+    } catch (err) {
+      if (err instanceof EventNotFoundError) {
+        throw redirect({ to: '/', search: { error: 'group-not-found' } })
+      }
+      throw err
+    }
+  },
   component: Gallery,
 })
 

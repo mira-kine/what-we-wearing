@@ -1,4 +1,4 @@
-const KEY = 'outfit_session'
+const KEY = 'outfit_sessions'
 
 export type Session = {
   participantId: string
@@ -7,20 +7,39 @@ export type Session = {
   eventCode: string
 }
 
-export function getSession(): Session | null {
-  if (typeof window === 'undefined') return null
+type SessionMap = Record<string, Session>
+
+function getSessions(): SessionMap {
+  if (typeof window === 'undefined') return {}
   try {
     const raw = localStorage.getItem(KEY)
-    return raw ? (JSON.parse(raw) as Session) : null
+    return raw ? (JSON.parse(raw) as SessionMap) : {}
   } catch {
-    return null
+    return {}
   }
 }
 
-export function setSession(session: Session): void {
-  localStorage.setItem(KEY, JSON.stringify(session))
+/** Return the session for a specific event code, or the most-recently saved session as fallback. */
+export function getSession(eventCode?: string): Session | null {
+  const map = getSessions()
+  if (eventCode) return map[eventCode] ?? null
+  // Fallback: return any session (last written). Used by routes that don't know the code yet.
+  const values = Object.values(map)
+  return values.length > 0 ? values[values.length - 1] : null
 }
 
-export function clearSession(): void {
-  localStorage.removeItem(KEY)
+export function setSession(session: Session): void {
+  const map = getSessions()
+  map[session.eventCode] = session
+  localStorage.setItem(KEY, JSON.stringify(map))
+}
+
+export function clearSession(eventCode?: string): void {
+  if (!eventCode) {
+    localStorage.removeItem(KEY)
+    return
+  }
+  const map = getSessions()
+  delete map[eventCode]
+  localStorage.setItem(KEY, JSON.stringify(map))
 }
